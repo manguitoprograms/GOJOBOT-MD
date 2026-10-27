@@ -6,7 +6,7 @@ let handler = async (m, { command, usedPrefix, conn, text, args }) => {
 
   try {
     m.react('🕒')
-    const res = await fetch(`${global.api.url}/search/spotify?q=${encodeURIComponent(text)}&limit=10`)
+    const res = await fetch(`${api.url}/search/spotify?q=${encodeURIComponent(text)}&limit=10`)
     const json = await res.json()
 
     if (!json.status || !json.tracks?.length) throw new Error('No se encontraron canciones.')
