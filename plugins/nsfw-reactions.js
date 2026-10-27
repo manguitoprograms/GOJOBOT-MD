@@ -102,7 +102,7 @@ let handler = async (m, { conn, usedPrefix, command }) => {
       : `\`${fromName}\` ${captionText} ${getRandomSymbol()}.`
 
     const apiEndpoint = endpointMap[currentCommand] || currentCommand
-    const apiUrl = `${global.APIs.light.url}/reaction/nsfw/${apiEndpoint}`
+    const apiUrl = `${api.url}/reaction/nsfw/${apiEndpoint}`
     const response = await fetch(apiUrl)
     const data = await response.json()
 
