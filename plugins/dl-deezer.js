@@ -1,46 +1,32 @@
 import fetch from "node-fetch"
 
-let handler = async (m, { conn, text }) => {
+let handler = async (m, { conn, text, usedPrefix, command }) => {
+  if (!text?.trim()) return conn.reply(m.chat, "✿ *Por favor, proporciona el nombre de una canción o artista.*", m)
   try {
-    if (!text?.trim()) {
-      return conn.reply(m.chat, "《✧》Por favor, ingresa el nombre de la canción que deseas buscar.", m)
-    }
+    const s = await (await fetch(`${api.url}/search/deezer?q=${encodeURIComponent(text)}&limit=1`)).json()
+    if (!s.status || !s.data?.length) throw "Sin resultados"
+    const song = s.data[0]
 
-    await m.react("🔍")
-    const searchRes = await fetch(`${global.APIs.light.url}/search/deezer?q=${encodeURIComponent(text)}&limit=1`)
-    const searchJson = await searchRes.json()
+    await conn.sendMessage(m.chat, {
+      image: { url: song.thumbnail },
+      caption: `   *｡ Título ›* ${song.title}
+   *｡ Artista ›* ${song.artist}
+   *｡ Álbum ›* ${song.album}
+   *｡ Duración ›* ${song.duration}
+   *｡ Date ›* ${song.date}
+   *｡ Enlace ›* ${song.link}
+    
+> 🕸️ Descargando audio... `
+    }, { quoted: m })
 
-    if (!searchJson.status || !searchJson.result?.length) {
-      throw "No se encontraron resultados."
-    }
-
-    const song = searchJson.result[0]
-    await conn.sendMessage(m.chat, { image: { url: song.thumbnail }, caption: `✦ *Deezer Downloader*
-
-▢ *Título:* ${song.title}
-▢ *Artista:* ${song.artist}
-▢ *Álbum:* ${song.album}
-▢ *Duración:* ${song.duration}
-▢ *Link:* ${song.deezer_url}
-
-> 🥢 Descargando audio...`.trim() }, { quoted: m })
-
-    const dlRes = await fetch(`${global.APIs.light.url}/download/deezer?url=${encodeURIComponent(song.deezer_url)}`)
-    const dlJson = await dlRes.json()
-
-    if (!dlJson.status || !dlJson.data?.dl) {
-      throw "No se pudo obtener el audio."
-    }
-
-    await conn.sendMessage(m.chat, { audio: { url: dlJson.data.dl }, mimetype: "audio/mpeg", fileName: dlJson.data.filename || `${song.title}.mp3` }, { quoted: m })
-
+    const d = await (await fetch(`${api.url}/download/deezer?url=${song.link}`)).json()
+    await conn.sendMessage(m.chat, { audio: { url: d.data.downloadUrl }, mimetype: "audio/mpeg" }, { quoted: m })
   } catch (e) {
-    await conn.reply(m.chat, `🌷 Error:\n${e}`, m)
+    conn.reply(m.chat, `> ✿︎ An unexpected error occurred while executing command *${usedPrefix + command}*.\n> *[Error: ${e.message}]*`, m)
   }
 }
-
 handler.command = ["deezer", "dz", "playdz"]
-handler.tags = ["downloader"]
+handler.tags = ["download"]
 handler.help = ["deezer *« ǫᴜᴇʀʏ »*"]
 handler.group = true
 

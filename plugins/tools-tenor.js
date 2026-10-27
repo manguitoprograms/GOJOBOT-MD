@@ -28,17 +28,25 @@ await conn.relayMessage(mediaMsg.key.remoteJid, mediaMsg.message, { messageId: m
 await baileys.delay(delay) }
 return album
 }
+
 const handler = async (m, { conn, text, usedPrefix }) => {
 if (!text) return m.reply(`❀ Por favor, ingrese el texto para buscar su Gifs.`)
 try {
 await m.react('🕒')
-const res = await fetch(`${global.APIs.delirius.url}/search/tenor?q=${text}`)
+const res = await fetch(`${api.url}/search/tenor?q=${encodeURIComponent(text)}&limit=10`)
 const json = await res.json()
-const gifs = json.data
+const gifs = json.result
 if (!gifs || gifs.length < 2) { await m.react('✖️'); return m.reply('ꕥ No se encontraron resultados.') }
+
 const maxItems = Math.min(gifs.length, 10)
 const medias = gifs.slice(0, maxItems).map(gif => ({ type: 'video', data: { url: gif.mp4 } }))
-await sendAlbumMessage(m.chat, medias, { caption: `❀ G I F - S E A R C H ❀\n\n✦ Busqueda: ${text}\n✧ Resultados: ${maxItems}`, quoted: m })
+
+let list = gifs.slice(0, maxItems).map((v, i) => {
+  let date = new Date(v.created * 1000).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+  return `*${i+1}.* ${v.title || 'Sin título'}\n> Duración: ${v.duration}s | Fecha: ${date}`
+}).join('\n\n')
+
+await sendAlbumMessage(m.chat, medias, { caption: `❀ G I F - S E A R C H ❀\n\n✦ Busqueda: ${text}\n✧ Resultados: ${maxItems}\n\n${list}`, quoted: m })
 await m.react('✔️')
 } catch (e) {
 await m.react('✖️')
@@ -46,7 +54,6 @@ m.reply(`⚠︎ Se ha producido un problema.\n> Usa *${usedPrefix}report* para i
 }}
 
 handler.help = ['tenor']
-handler.tags = ['tools']
+handler.tags = ['search']
 handler.command = ['tenorsearch', 'tenor']
-
 export default handler

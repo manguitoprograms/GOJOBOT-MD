@@ -8,7 +8,7 @@ let handler = async (m, { conn, text, usedPrefix, command }) => {
   let statusMsg = await m.reply('🔎 *Buscando grupos...*')
 
   try {
-    const api = `https://api--shadowcorexyz.replit.app/search/wagroup?q=${encodeURIComponent(text)}&page=1`
+    const api = `${api.url}/search/wagroup?q=${encodeURIComponent(text)}&page=1`
     const res = await fetch(api, { timeout: 25000 })
     const json = await res.json()
 

@@ -2,14 +2,13 @@ import { watchFile, unwatchFile } from "fs"
 import chalk from "chalk"
 import { fileURLToPath } from "url"
 import fs from "fs"
-import { prepareWAMessageMedia } from '@whiskeysockets/baileys'
 
 global.botNumber = "" 
 global.owner = ["51963315293", "51934053286", "51978385249", "51922902497", "51966453839", "5213541145561", "51930958596"]
 global.suittag = ["51963315293"] 
 global.prems = ["51934053286"]
 
-
+global.prefix = /^[#!./-]/
 global.vs = "^1.8.2 • Latest"
 global.sessions = "Sessions/Principal"
 global.jadi = "Sessions/SubBot"
@@ -42,13 +41,9 @@ global.ch = {
 
 //*─ׄ─ׅ─ׄ─⭒─ׄ─ׅ─ׄ─⭒─ׄ─ׅ─ׄ─⭒─ׄ─ׅ─ׄ─⭒─ׄ─ׅ─ׄ─⭒─ׄ─ׅ─ׄ─*
 
-global.gojo = prepareWAMessageMedia
-global.APIs = {
-vreden: { url: "https://api.vreden.web.id", key: null },
-delirius: { url: "https://api.delirius.store", key: null },
-siputzx: { url: "https://api.siputzx.my.id", key: null },
-stellar: { url: "https://api.stellarwa.xyz", key: "this-xyz"},
-light: { url: "https://nexus--shadowxyz189.replit.app", key: "miku_sakura" } // poble att: el creador 
+global.api = {
+  url: 'https://nexus--shadowxyz189.replit.app',
+  key: '....'
 }
 
 //*─ׄ─ׅ─ׄ─⭒─ׄ─ׅ─ׄ─⭒─ׄ─ׅ─ׄ─⭒─ׄ─ׅ─ׄ─⭒─ׄ─ׅ─ׄ─⭒─ׄ─ׅ─ׄ─*

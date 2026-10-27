@@ -22,15 +22,15 @@ export async function before(m, { conn }) {
     return;
   }
   
-  const thumbBuf = await fetch('https://cdn.phototourl.com/free/2026-07-05-3af7bb15-51f7-4283-8e0d-1e2c6834c48d.jpg').then(r => r.buffer())
+  const thumbBuf = await fetch(icono).then(r => r.buffer())
   const b64 = Buffer.from(thumbBuf).toString('base64')
 
   await conn.relayMessage(
     m.chat,
     {
       extendedTextMessage: {
-        text: `https://api.gojo.biz.id\nᥱᥣ ᥴ᥆mᥲᥒძ᥆ *${command}*🌵 ᥒ᥆ ᥱ᥊іs𝗍ᥱ <:3\n> 🍜 ᥙsᥲ *${usedPrefix}ʜᴇʟᴘ* ⍴ᥲrᥲ ᥎ᥱr ᥣᥲ ᥣіs𝗍ᥲ ძᥱ ᥴ᥆mᥲᥒძ᥆s.`,
-        matchedText: 'https://api.gojo.biz.id',
+        text: `${api.url}\n❀ ᥱᥣ ᥴ᥆mᥲᥒძ᥆ *${command}* ᥒ᥆ ᥱ᥊іs𝗍ᥱ.\n> ⚥︎ ᥙsᥲ *${usedPrefix}ʜᴇʟᴘ* ⍴ᥲrᥲ ᥎ᥱr ᥣᥲ ᥣіs𝗍ᥲ ძᥱ ᥴ᥆mᥲᥒძ᥆s.`,
+        matchedText: api.url,
         description: '🥢 Welcome, to Satoru Gojou.',
         title: botname,
         previewType: 'shadow',
@@ -44,5 +44,30 @@ export async function before(m, { conn }) {
       }
     },
     { quoted: m }
-  )
+  )/*
+  await conn.sendMessage(m.chat, {
+    text: `https://chat.whatsapp.com/HNPyEUbZscyCZx81xety6o?s=cl&p=a&mlu=4\nᥱᥣ ᥴ᥆mᥲᥒძ᥆ *${command}*🌵 ᥒ᥆ ᥱ᥊іs𝗍ᥱ <:3\n> 🍜 ᥙsᥲ *${usedPrefix}ʜᴇʟᴘ* ⍴ᥲrᥲ ᥎ᥱr ᥣᥲ ᥣіs𝗍ᥲ ძᥱ ᥴ᥆mᥲᥒძ᥆s.`,
+    linkPreview: banner ? (await gojo(
+    { image: { url: banner }}, 
+    { upload: conn.waUploadToServer, mediaTypeOverride: 'thumbnail-link' }
+  ).then(({ imageMessage }) => ({ 
+    'canonical-url': 'https://chat.whatsapp.com/HNPyEUbZscyCZx81xety6o?s=cl&p=a&mlu=4', 
+    'matched-text': 'https://chat.whatsapp.com/HNPyEUbZscyCZx81xety6o?s=cl&p=a&mlu=4', 
+    title: `🥢 Welcome, to Satoru Gojo ✧`, 
+    description: `🍡 xd`, 
+    jpegThumbnail: imageMessage?.jpegThumbnail ? Buffer.from(imageMessage.jpegThumbnail) : undefined, 
+    highQualityThumbnail: imageMessage || undefined 
+  }))) : undefined,
+    contextInfo: {
+      mentionedJid: [m.sender],
+      isForwarded: true,
+              forwardedNewsletterMessageInfo: {
+                newsletterJid: '120363421367237421@newsletter',
+                serverMessageId: '',
+                newsletterName: botname
+              },
+      
+    }
+  }, { quoted: m })
+  */
 }

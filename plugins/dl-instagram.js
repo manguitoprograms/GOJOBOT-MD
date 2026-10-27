@@ -15,7 +15,7 @@ let handler = async (m, { conn, text }) => {
   let statusMsg = await m.reply('🍡 *Buscando información...*')
 
   try {
-    const api = `${global.APIs.light.url}/download/igdl/v2/slide?url=${encodeURIComponent(text)}`
+    const api = `${api.url}/download/igdl/v2/slide?url=${encodeURIComponent(text)}`
     const res = await fetch(api)
     const json = await res.json()
 

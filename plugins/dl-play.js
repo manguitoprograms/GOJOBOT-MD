@@ -1,76 +1,62 @@
-import fetch from 'node-fetch'
 import yts from 'yt-search'
+import fetch from 'node-fetch'
+import { prepareWAMessageMedia } from '@whiskeysockets/baileys'
 
-let handler = async (m, { conn, text, command }) => {
+let handler = async (m, { conn, text, usedPrefix, command }) => {
+  if (!text?.trim()) return conn.reply(m.chat, `✿ Ejemplo: *${usedPrefix + command} diles - Bad Bunny*`, m)
+
   try {
-    if (!text?.trim())
-      return conn.reply(m.chat, `《✧》Por favor, menciona el nombre o URL del video que deseas descargar`, m)
+    await m.react("🕐")
+    let search = await yts(text)
+    let d = search.videos[0]
+    if (!d) return conn.reply(m.chat, "✿ No se encontraron resultados.", m)
 
-    await m.react('🔍')
-    const searchRes = await yts(text)
-    if (!searchRes.videos || !searchRes.videos.length)
-      throw 'No se encontraron resultados.'
-
-    const video = searchRes.videos[0]
-    const formatViews = (views) => {
-      return views.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-    }
+    let caption = `    ˚ · ๑୧ YOᑌTᑌᗷᗴ ᗪOᗯᑎᒪOᗩᗪᗴᖇ ✧
+    
+*｡ 𝚃𝙸𝚃𝚄𝙻𝙾 ›* ${d.title}
+*｡ 𝙲𝙰𝙽𝙰𝙻 ›* ${d.author.name}
+*｡ 𝙳𝚄𝚁𝙰𝙲𝙸𝙾𝙽 ›* ${d.timestamp}
+*｡ 𝙿𝚄𝙱𝙻𝙸𝙲𝙰𝙳𝙾 ›* ${d.ago}
+*｡ 𝚅𝙸𝚂𝚃𝙰𝚂 ›* ${d.views.toLocaleString()}
+*｡ 𝙴𝙽𝙻𝙰𝙲𝙴 ›* ${d.url}`
 
     await conn.sendMessage(m.chat, {
-        text: ` *｡ Título :* ${video.title}
- *｡ Author :* ${video.author?.name || 'Desconocido'}
- *｡ Vistas :* ${formatViews(video.views)}
- *｡ Duración :* ${video.timestamp}
- *｡ Publicado :* ${video.ago || '```'}
- *｡ Enlace :* ${video.url} 
-     
-      _🎋 Descargando audio..._
-      `,
-        linkPreview: video.thumbnail ? (await gojo(
-        { image: { url: video.thumbnail }}, 
+      text: caption,
+      linkPreview: d.thumbnail ? (await prepareWAMessageMedia(
+        { image: { url: d.thumbnail } },
         { upload: conn.waUploadToServer, mediaTypeOverride: 'thumbnail-link' }
-      ).then(({ imageMessage }) => ({ 
-        'canonical-url': video.url,
-        'matched-text': video.url,
-        title: `𖹭  ׄ  ְ 🍡 Y O U T U B E - M U S I C   ݁      ✩   ݂      ݁  `, 
-        description: botname, 
-        jpegThumbnail: imageMessage?.jpegThumbnail ? Buffer.from(imageMessage.jpegThumbnail) : undefined, 
-        highQualityThumbnail: imageMessage || undefined 
+      ).then(({ imageMessage }) => ({
+        'canonical-url': d.url,
+        'matched-text': d.url,
+        title: `𖹭  ׄ  ְ 🍡 Y O U T U B E - M U S I C   ݁      ✩   ݂      ݁  `,
+        description: dev,
+        jpegThumbnail: imageMessage?.jpegThumbnail ? Buffer.from(imageMessage.jpegThumbnail) : undefined,
+        highQualityThumbnail: imageMessage || undefined
       }))) : undefined,
-        contextInfo: {
-          mentionedJid: [m.sender],
-          isForwarded: true,
-          forwardedNewsletterMessageInfo: {
-            newsletterJid: channelRD.id,
-            serverMessageId: '',
-            newsletterName: channelRD.name
-          },
-        }
-      }, { quoted: m });
-
-    const dlRes = await fetch(`${global.APIs.light.url}/download/savetube?url=${encodeURIComponent(video.url)}&type=audio`)
-    const dlJson = await dlRes.json()
-
-    if (!dlJson.status || !dlJson.data?.dl)
-      throw 'No se pudo obtener el audio.'
-
-    const audioUrl = dlJson.data.dl
-
-    await conn.sendMessage(m.chat, {
-      audio: { url: audioUrl },
-      mimetype: 'audio/mpeg',
-      fileName: `${video.title}.mp3`
+      contextInfo: {
+        mentionedJid: [m.sender],
+        isForwarded: false
+      }
     }, { quoted: m })
 
-    await m.react('✔️')
+    let apiRes = await (await fetch(`${api.url}/download/savetube?url=${d.url}&type=audio`)).json()
+    let dl = apiRes.data?.dl
+    if (!dl) throw new Error("No se pudo obtener el enlace de descarga")
+
+    await conn.sendMessage(m.chat, {
+      audio: { url: dl },
+      mimetype: 'audio/mpeg',
+      fileName: `${d.title}.mp3`
+    }, { quoted: m })
+    await m.react("✔️")
 
   } catch (e) {
-    conn.reply(m.chat, ` Error:\n${e}`, m)
+    conn.reply(m.chat, `> ✿︎ An unexpected error occurred while executing command *${usedPrefix + command}*.\n> *[Error: ${e.message || e}]*`, m)
   }
 }
 
-handler.command = ['play', 'audio']
+handler.command = ['play', 'audio', 'mp3', 'ytaudio']
 handler.tags = ['download']
-handler.help = ['play + <query/url>']
+handler.help = ['play <query/url>']
 handler.group = true
 export default handler

@@ -5,7 +5,7 @@ let handler = async (m, { conn, text, usedPrefix, command }) => {
 
     try {
         await m.react('🧠');
-        const apiUrl = `${global.APIs.light.url}/ai/claude-haiku?text=${encodeURIComponent(text)}`;
+        const apiUrl = `${api.url}/ai/claude-haiku?text=${encodeURIComponent(text)}`;
         
         const response = await axios.get(apiUrl);
         const res = response.data;

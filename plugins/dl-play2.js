@@ -1,85 +1,64 @@
-import fetch from 'node-fetch'
 import yts from 'yt-search'
+import fetch from 'node-fetch'
+import { prepareWAMessageMedia } from '@whiskeysockets/baileys'
 
-let handler = async (m, { conn, text, command }) => {
+let handler = async (m, { conn, text, usedPrefix, command }) => {
+  if (!text?.trim()) return conn.reply(m.chat, `✿ Ejemplo: *${usedPrefix + command} diles - Bad Bunny*`, m)
+
   try {
-    if (!text?.trim())
-      return conn.reply(m.chat, `《✧》Por favor, menciona el nombre o URL del video que deseas descargar`, m)
+    await m.react("🕐")
+    let search = await yts(text)
+    let d = search.videos[0]
+    if (!d) return conn.reply(m.chat, "✿ No se encontraron resultados.", m)
 
-    await m.react('🔍')
-    const searchRes = await yts(text)
-    if (!searchRes.videos || !searchRes.videos.length)
-      throw 'No se encontraron resultados.'
-
-    const video = searchRes.videos[0]
-    const formatViews = (views) => {
-      return views.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-    }
+    let caption = `    ˚ · ๑୧ YOᑌTᑌᗷᗴ ᗪOᗯᑎᒪOᗩᗪᗴᖇ ✧
+    
+*｡ 𝚃𝙸𝚃𝚄𝙻𝙾 ›* ${d.title}
+*｡ 𝙲𝙰𝙽𝙰𝙻 ›* ${d.author.name}
+*｡ 𝙳𝚄𝚁𝙰𝙲𝙸𝙾𝙽 ›* ${d.timestamp}
+*｡ 𝙿𝚄𝙱𝙻𝙸𝙲𝙰𝙳𝙾 ›* ${d.ago}
+*｡ 𝚅𝙸𝚂𝚃𝙰𝚂 ›* ${d.views.toLocaleString()}
+*｡ 𝙴𝙽𝙻𝙰𝙲𝙴 ›* ${d.url}`
 
     await conn.sendMessage(m.chat, {
-        text: ` *｡ Título :* ${video.title}
- *｡ Author :* ${video.author?.name || 'Desconocido'}
- *｡ Vistas :* ${formatViews(video.views)}
- *｡ Duración :* ${video.timestamp}
- *｡ Publicado :* ${video.ago || '```'}
- *｡ Enlace :* ${video.url} 
-     
-      _🎋 Descargando Video..._
-      `,
-        linkPreview: video.thumbnail ? (await gojo(
-        { image: { url: video.thumbnail }}, 
+      text: caption,
+      linkPreview: d.thumbnail ? (await prepareWAMessageMedia(
+        { image: { url: d.thumbnail } },
         { upload: conn.waUploadToServer, mediaTypeOverride: 'thumbnail-link' }
-      ).then(({ imageMessage }) => ({ 
-        'canonical-url': video.url,
-        'matched-text': video.url,
-        title: `𖹭  ׄ  ְ 🍡 Y O U T U B E - M U S I C   ݁      ✩   ݂      ݁  `, 
-        description: botname, 
-        jpegThumbnail: imageMessage?.jpegThumbnail ? Buffer.from(imageMessage.jpegThumbnail) : undefined, 
-        highQualityThumbnail: imageMessage || undefined 
+      ).then(({ imageMessage }) => ({
+        'canonical-url': d.url,
+        'matched-text': d.url,
+        title: `𖹭  ׄ  ְ 🍡 Y O U T U B E - V I D E O   ݁      ✩   ݂      ݁  `,
+        description: dev,
+        jpegThumbnail: imageMessage?.jpegThumbnail ? Buffer.from(imageMessage.jpegThumbnail) : undefined,
+        highQualityThumbnail: imageMessage || undefined
       }))) : undefined,
-        contextInfo: {
-          mentionedJid: [m.sender],
-          isForwarded: true,
-          forwardedNewsletterMessageInfo: {
-            newsletterJid: channelRD.id,
-            serverMessageId: '',
-            newsletterName: channelRD.name
-          },
-        }
-      }, { quoted: m })
+      contextInfo: {
+        mentionedJid: [m.sender],
+        isForwarded: false
+      }
+    }, { quoted: m })
 
-    const dlRes = await fetch(`${global.APIs.light.url}/download/savetube?url=${encodeURIComponent(video.url)}&type=video`)
-    const dlJson = await dlRes.json()
+    let apiRes = await (await fetch(`${api.url}/download/aio/v3?url=${d.url}`)).json()
+    let dl = apiRes.data?.url || apiRes.data?.raw?.url
+    let sizeStr = apiRes.data?.raw?.size || "0 MB"
+    if (!dl) throw new Error("No se pudo obtener el enlace")
 
-    if (!dlJson.status || !dlJson.data?.dl)
-      throw 'No se pudo obtener el video.'
+    let sizeMB = parseFloat(sizeStr) * (sizeStr.toLowerCase().includes('gb') ? 1024 : 1)
+    let isHeavy = sizeMB > 170
 
-    const isHeavy = await fetch(dlJson.data.dl, { method: 'HEAD' })
-      .then(r => parseInt(r.headers.get('content-length') || 0) > 100 * 1024 * 1024)
-      .catch(() => false)
-
-    if (isHeavy) {
-      await conn.sendMessage(m.chat, {
-        document: { url: dlJson.data.dl },
-        mimetype: 'video/mp4',
-        fileName: `${dlJson.data.title}.mp4`
-      }, { quoted: m })
-    } else {
-      await conn.sendMessage(m.chat, {
-        video: { url: dlJson.data.dl },
-        mimetype: 'video/mp4',
-        fileName: `${dlJson.data.title}.mp4`
-      }, { quoted: m })
-    }
-    await m.react('✔️')
-
+    await conn.sendFile(m.chat, dl, `${d.title}.mp4`, `*» Título:* ${d.title}\n*» Tamaño:* ${sizeStr}`, m, null, {
+      asDocument: isHeavy,
+      mimetype: 'video/mp4'
+    })
+    await m.react("✔️")
   } catch (e) {
-    conn.reply(m.chat, ` Error:\n${e}`, m)
+    conn.reply(m.chat, `> ✿︎ An unexpected error occurred while executing command *${usedPrefix + command}*.\n> *[Error: ${e.message || e}]*`, m)
   }
 }
 
-handler.command = ['play2', 'video']
+handler.command = ['play2', 'playv', 'ytvideo', 'video']
 handler.tags = ['download']
-handler.help = ['play2 + <query/url>']
+handler.help = ['play2 <query>']
 handler.group = true
 export default handler

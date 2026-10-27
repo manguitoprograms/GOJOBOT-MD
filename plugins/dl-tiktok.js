@@ -1,40 +1,151 @@
-import axios from 'axios'
+import fetch from 'node-fetch'
 
-const handler = async (m, { conn, text, usedPrefix }) => {
-if (!text) return conn.reply(m.chat, '*❀ Por favor, ingresa un término de búsqueda o el enlace de TikTok.*', m)
-const isUrl = /(?:https:?\/{2})?(?:www\.|vm\.|vt\.|t\.)?tiktok\.com\/([^\s&]+)/gi.test(text)
-try {
-await m.react('🕒')
-if (isUrl) {
-const res = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(text)}?hd=1`)
-const data = res.data?.data;
-if (!data?.play) return conn.reply(m.chat, 'ꕥ Enlace inválido o sin contenido descargable.', m)
-const { title, duration, author, created_at, type, images, music, play } = data
-const caption = createCaption(title, author, duration, created_at)
-if (type === 'image' && Array.isArray(images)) {
-const medias = images.map(url => ({ type: 'image', data: { url }, caption }));
-await conn.sendSylphy(m.chat, medias, { quoted: m })
-if (music) {
-await conn.sendMessage(m.chat, { audio: { url: music }, mimetype: 'audio/mp4', fileName: 'tiktok_audio.mp4' }, { quoted: m })
-}} else {
-await conn.sendMessage(m.chat, { video: { url: play }, caption }, { quoted: m })
-}} else {
-const res = await axios({ method: 'POST', url: 'https://tikwm.com/api/feed/search', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'Cookie': 'current_language=en', 'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36' }, data: { keywords: text, count: 20, cursor: 0, HD: 1 }})
-const results = res.data?.data?.videos?.filter(v => v.play) || []
-if (results.length < 2) return conn.reply(m.chat, 'ꕥ Se requieren al menos 2 resultados válidos con contenido.', m)
-const medias = results.slice(0, 10).map(v => ({ type: 'video', data: { url: v.play }, caption: createSearchCaption(v) }))
-await conn.sendSylphy(m.chat, medias, { quoted: m })
-}
-await m.react('✔️')
-} catch (e) {
-await m.react('✖️')
-await conn.reply(m.chat, `⚠︎ Se ha producido un problema.\n> Usa *${usedPrefix}report* para informarlo.\n\n${e.message}`, m)
-}}
-function createCaption(title, author, duration, created_at = '') {
-  return `❀ *Título ›* \`${title || 'No disponible'}\`\n> ☕︎ Autor › *${author?.nickname || author?.unique_id || 'No disponible'}*\n> ✰ Duración › *${duration || 'No disponible'}s*${created_at ? `\n> ☁︎ Creado » ${created_at}` : ''}\n> 𝅘𝅥𝅮 Música » [${author?.nickname || author?.unique_id || 'No disponible'}] original sound - ${author?.unique_id || 'unknown'}`
-}
-function createSearchCaption(data) {
-  return `❀ Título › ${data.title || 'No disponible'}\n\n☕︎ Autor › ${data.author?.nickname || 'Desconocido'} ${data.author?.unique_id ? `@${data.author.unique_id}` : ''}\n✧︎ Duración › ${data.duration || 'No disponible'}\n𝅘𝅥𝅮 Música › ${data.music?.title || `[${data.author?.nickname || 'No disponible'}] original sound - ${data.author?.unique_id || 'unknown'}`}`
+let handler = async (m, { conn, args, usedPrefix, command }) => {
+  if (!args[0]) return m.reply(`*ꕥ Por favor, ingresa un término de búsqueda o el enlace de TikTok.*`)
+
+  const text = args.join(' ')
+  const isUrl = /tiktok\.com|vt\.tiktok\.com/i.test(text)
+
+  try {
+    await m.reply('➪ Procesando contenido de TikTok...')
+
+    if (isUrl) {
+      const apiUrl = `${api.url}/download/tiktok?url=${encodeURIComponent(text)}`
+      const res = await fetch(apiUrl)
+      const json = await res.json()
+      if (!json.status || !json.data) throw 'Enlace inválido o sin contenido descargable.'
+
+      const d = json.data
+      const stats = d.stats || {}
+      const authorName = d.author?.name || d.author?.nickname || 'N/A'
+      const authorUser = d.author?.username || 'N/A'
+
+      const cap = `    *乂 TIKTOK - INFO 乂*
+
+   *｡ Título ›* ${d.title || 'Sin título'}
+   *｡ Autor ›* ${authorName} (@${authorUser})
+   *｡ Tipo ›* ${d.type || 'N/A'}
+   *｡ Duración ›* ${d.duration || 'N/A'}
+   *｡ Tamaño ›* ${d.size || 'N/A'}
+   *｡ Región ›* ${d.region || 'N/A'}
+   *｡ Fecha ›* ${d.date || 'N/A'}
+
+   *｡ Likes ›* ${stats.likes || '0'}
+   *｡ Comentarios ›* ${stats.comments || '0'}
+   *｡ Vistas ›* ${stats.views || '0'}
+   *｡ Favoritos ›* ${stats.favorites || '0'}
+   *｡ Shares ›* ${stats.shares || '0'}
+   *｡ Descargas ›* ${stats.downloads || '0'}
+
+   *｡ Audio ›* ${d.audio || 'N/A'}
+   *｡ Enlace ›* ${d.link || text}`.trim()
+
+      if (d.type === 'video') {
+        const videoUrl = d.media?.download || d.media?.watermark || d.watermark
+        if (!videoUrl) throw 'No se encontró enlace de video.'
+        await conn.sendMessage(m.chat, {
+          video: { url: videoUrl },
+          caption: cap,
+          mimetype: 'video/mp4'
+        }, { quoted: m })
+
+      } else if (d.type === 'image') {
+        const images = d.media?.images || []
+        if (!images.length) throw 'No se encontraron imágenes.'
+
+        const medias = images.map((img, i) => ({
+          type: 'image',
+          data: { url: img },
+          caption: i === 0 ? cap : ''
+        }))
+
+        if (conn.sendSylphy) {
+          await conn.sendSylphy(m.chat, medias, { quoted: m })
+        } else if (conn.sendAlbumMessage) {
+          const albumMedias = images.map((img, i) => ({
+            image: { url: img },
+            caption: i === 0 ? cap : ''
+          }))
+          await conn.sendAlbumMessage(m.chat, albumMedias, { quoted: m })
+        } else {
+          for (const media of medias) {
+            await conn.sendMessage(m.chat, {
+              image: { url: media.data.url },
+              caption: media.caption
+            }, { quoted: m })
+          }
+        }
+
+        const audioUrl = d.audio_download || d.music_info?.download
+        if (audioUrl) {
+          await conn.sendMessage(m.chat, {
+            audio: { url: audioUrl },
+            mimetype: 'audio/mp4',
+            fileName: 'tiktok_audio.mp4'
+          }, { quoted: m })
+        }
+
+      } else {
+        throw `Tipo de contenido no soportado: ${d.type}`
+      }
+
+    } else {
+      const searchUrl = `${api.url}/search/tiktok?q=${encodeURIComponent(text)}&count=10`
+      const res = await fetch(searchUrl)
+      const json = await res.json()
+      if (!json.status || !json.data?.length) throw 'No se encontraron resultados.'
+
+      const results = json.data.filter(v => v.download?.video).slice(0, 10)
+      if (!results.length) throw 'No se encontraron videos válidos.'
+
+      const makeCap = (v, i) => {
+        const s = v.stats || {}
+        return `*乂 TIKTOK - ${i + 1} 乂*
+
+   *｡ Título ›* ${v.title || 'Sin título'}
+   *｡ Autor ›* ${v.author?.nickname || 'N/A'} (@${v.author?.username || 'N/A'})
+   *｡ Duración ›* ${v.duration || 'N/A'}
+   *｡ Tamaño ›* ${v.size || 'N/A'}
+   *｡ Fecha ›* ${v.date || 'N/A'}
+
+   *｡ Likes ›* ${s.likes || '0'}
+   *｡ Comentarios ›* ${s.comments || '0'}
+   *｡ Vistas ›* ${s.views || '0'}
+   *｡ Favoritos ›* ${s.favorites || '0'}
+   *｡ Shares ›* ${s.shares || '0'}
+
+   *｡ Música ›* ${v.music?.title || 'N/A'}
+   *｡ Enlace ›* ${v.url || 'N/A'}`
+      }
+
+      const medias = results.map((v, i) => ({
+        type: 'video',
+        data: { url: v.download.video },
+        caption: makeCap(v, i)
+      }))
+
+      if (conn.sendSylphy) {
+        await conn.sendSylphy(m.chat, medias, { quoted: m })
+      } else if (conn.sendAlbumMessage) {
+        const albumMedias = results.map((v, i) => ({
+          video: { url: v.download.video },
+          caption: makeCap(v, i)
+        }))
+        await conn.sendAlbumMessage(m.chat, albumMedias, { quoted: m })
+      } else {
+        for (const media of medias) {
+          await conn.sendMessage(m.chat, {
+            video: { url: media.data.url },
+            caption: media.caption,
+            mimetype: 'video/mp4'
+          }, { quoted: m })
+        }
+      }
+    }
+
+  } catch (e) {
+    m.reply(`> ✿︎ An unexpected error occurred while executing command *${usedPrefix + command}*.\n> *[Error: ${e.message}]*`)
+  }
 }
 
 handler.help = ['tiktok', 'tt']

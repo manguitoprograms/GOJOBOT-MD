@@ -1,118 +1,69 @@
 import fetch from 'node-fetch'
 
 let handler = async (m, { conn, text, usedPrefix }) => {
-  const fancyMode = true
+    if (!text) return m.reply(`Uso: ${usedPrefix}ytvdoc <link youtube>`)
 
-  const fontMap = {
-    'a':'ᥲ','b':'ᑲ','c':'ᥴ','d':'ძ','e':'ᥱ','f':'𝖿','g':'g','h':'һ','i':'і','j':'ȷ','k':'k','l':'ᥣ','m':'m','n':'ᥒ','o':'᥆','p':'⍴','q':'𝗊','r':'r','s':'s','t':'𝗍','u':'ᥙ','v':'᥎','w':'ᥕ','x':'᥊','y':'ᥡ','z':'z','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','0':'0',
-    'A':'ᥲ','B':'ᑲ','C':'ᥴ','D':'ძ','E':'ᥱ','F':'𝖿','G':'g','H':'һ','I':'і','J':'ȷ','K':'k','L':'ᥣ','M':'m','N':'ᥒ','O':'᥆','P':'⍴','Q':'𝗊','R':'r','S':'s','T':'𝗍','U':'ᥙ','V':'᥎','W':'ᥕ','X':'᥊','Y':'ᥡ','Z':'z'
-  }
-  const toFancy = (str) => fancyMode ? str.split('').map(c => fontMap[c] || c).join('') : str
+    await m.react('📥')
+    let msg = await conn.sendMessage(m.chat, { text: `乂 *Y O U T U B E - D O W N L O A D E R* 乂\n🌵 Buscando video...` }, { quoted: m })
 
-  const formatDuration = (sec) => {
-    const h = Math.floor(sec / 3600)
-    const mn = Math.floor((sec % 3600) / 60)
-    const s = sec % 60
-    let str = ''
-    if (h > 0) str += `${h} hora${h > 1 ? 's' : ''}, `
-    if (mn > 0) str += `${mn} minuto${mn > 1 ? 's' : ''}, `
-    str += `${s} segundo${s !== 1 ? 's' : ''}`
-    return str
-  }
+    const getVideo = async (url, retries = 2) => {
+        for(let i = 0; i <= retries; i++) {
+            try {
+                let res = await fetch(`${api.url}/api/play/youtube?q=${encodeURIComponent(url)}&format=mp4`)
+                let json = await res.json()
+                
+                if(!json.status || !json.data) throw new Error('Sin datos')
+                if(!json.data.download?.mp4) throw new Error('MP4 null')
+                
+                return {
+                    title: json.data.title,
+                    url: json.data.download.mp4,
+                    thumb: json.data.thumbnail,
+                    channel: json.data.channel,
+                    duration: json.data.duration,
+                    views: json.data.views
+                }
+            } catch(e) {
+                if(i === retries) throw e
+                await new Promise(r => setTimeout(r, 1500))
+            }
+        }
+    }
 
-  const getFileSize = async (url) => {
     try {
-      const head = await fetch(url, { method: 'HEAD' })
-      const size = head.headers.get('content-length')
-      if (!size) return 'Desconocido'
-      let bytes = Number(size)
-      if (bytes >= 1024 * 1024 * 1024) return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB'
-      return (bytes / 1024 / 1024).toFixed(2) + ' MB'
-    } catch {
-      return 'Desconocido'
+        let v = await getVideo(text)
+        
+        await conn.sendMessage(m.chat, {
+            text: `乂 *Y O U T U B E - D O W N L O A D E R* 乂\n🍄 Subiendo: ${v.title.slice(0,35)}...`,
+            edit: msg.key
+        })
+
+        await conn.sendMessage(m.chat, {
+            document: { url: v.url },
+            mimetype: 'video/mp4',
+            fileName: `${v.title.slice(0, 50)}.mp4`,
+            caption: `乂 *Y O U T U B E - D O W N L O A D E R* 乂
+ ° *Titulo:* ${v.title}
+ ° *Canal:* ${v.channel}
+ ° *Duracion:* ${v.duration}
+ ° *Vistas:* ${v.views}
+
+🍡 Descarga completa`
+        }, { quoted: m })
+
+        await conn.sendMessage(m.chat, { delete: msg.key })
+        await m.react('✅')
+
+    } catch (e) {
+        await conn.sendMessage(m.chat, { delete: msg.key })
+        m.reply(` Error: ${e.message}`)
     }
-  }
-
-  const fetchVideo = async (url) => {
-    try {
-      const res = await fetch(`${global.APIs.light.url}/download/aio/v2?url=${encodeURIComponent(url)}`, { timeout: 5000 })
-      const json = await res.json()
-
-      if (!json.status || !json.result?.data?.medias) throw new Error('sin datos')
-
-      const data = json.result.data
-      const video360 = data.medias.find(v => v.quality === 'mp4 (360p)' && v.type === 'video')
-      if (!video360) throw new Error('sin 360p')
-
-      const check = await fetch(video360.url, { method: 'HEAD' })
-      if (!check.ok) throw new Error(`link 403 o caído (${check.status})`)
-
-      return {
-        title: data.title,
-        duration: data.duration,
-        dlUrl: video360.url,
-        creator: json.creator || 'Shadow',
-        source: 'Nexu\'s Light'
-      }
-    } catch (e1) {
-      console.log('[ytv] API1 falló:', e1.message, '— intentando API2...')
-    }
-    
-    const res2 = await fetch(`${global.APIs.light.url}/download/ytmp4?url=${encodeURIComponent(url)}&quality=360p`, { timeout: 100000 })
-    const json2 = await res2.json()
-
-    if (!json2.status || !json2.data?.dl) throw new Error('API2 sin datos')
-
-    return {
-      title: json2.data.title,
-      duration: json2.data.duration,
-      dlUrl: json2.data.dl,
-      creator: json2.creator || 'Shadow',
-      source: 'Nexu\'s Light V2'
-    }
-  }
-
-  if (!text) return conn.reply(m.chat, toFancy(`❀ Manda el link de YouTube\nEj: ${usedPrefix}ytvdoc https://youtube.com/shorts/xxx`), m)
-
-  const startTime = Date.now()
-  await m.react('🕒')
-  let msg = await conn.sendMessage(m.chat, { text: toFancy(`乂 YT DOWNLOAD 乂\n✩ Buscando 360p...`) }, { quoted: m })
-
-  try {
-    const { title, duration, dlUrl, creator, source } = await fetchVideo(text.trim())
-
-    await conn.sendMessage(m.chat, {
-      text: toFancy(`\`乂 YOUTUBE - DOWNLOAD 乂\`\n✩ Enviando 360p...\n✩ Título: ${title.slice(0, 40)}`),
-      edit: msg.key
-    })
-
-    const sizeReal = await getFileSize(dlUrl)
-
-    await conn.sendMessage(m.chat, {
-      document: { url: dlUrl },
-      mimetype: 'video/mp4',
-      caption: toFancy(`\`乂 YOUTUBE  -  DOWNLOAD 乂\`\n*✩ Título:* ${title}\n*✩ Calidad:* 360p\n*✩ Duración:* ${formatDuration(duration)}\n*✩ Tamaño:* ${sizeReal}\n> ${dev}`),
-      fileName: `${title.slice(0, 30)}.mp4`
-    }, { quoted: m })
-
-    const timeTaken = ((Date.now() - startTime) / 1000).toFixed(2)
-    await conn.sendMessage(m.chat, {
-      text: toFancy(`\`乂 YOUTUBE  -  DOWNLOAD 乂\`\n> ✅ Descarga completa...\n\`🥢 Fetch:\` ${timeTaken} seg\n\`🌵 Calidad:\` 360p\n\`🧊 Tamaño:\` ${sizeReal}\n\`🔌 Source:\` ${source}\n🌱 Archivo enviado correctamente.`),
-      edit: msg.key
-    })
-
-    await m.react('✔️')
-
-  } catch (e) {
-    await conn.sendMessage(m.chat, { delete: msg.key })
-    await m.react('✖️')
-    conn.reply(m.chat, toFancy(`⚠︎ Error: ${e.message}`), m)
-  }
 }
 
 handler.help = ['ytvdoc <url>']
-handler.tags = ['download']
-handler.command = ['ytvdoc']
+handler.tags = ['downloader']
+handler.command = ['ytvdoc', 'ytvd']
+handler.limit = true
 handler.group = true
 
 export default handler

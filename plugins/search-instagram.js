@@ -4,7 +4,7 @@ let handler = async (m, { conn, text, usedPrefix, command }) => {
   try {
     if (!text) return m.reply(`✰ Uso: ${usedPrefix + command} anime\nEjemplo: ${usedPrefix + command} top animes 2026`)
     await m.react('🔍')
-    const api = `${global.APIs.light.url}/search/reels?q=${encodeURIComponent(text)}`
+    const api = `${api.url}/search/reels?q=${encodeURIComponent(text)}`
     const res = await fetch(api)
     const json = await res.json()
 

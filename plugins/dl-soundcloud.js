@@ -1,22 +1,23 @@
-import axios from 'axios'
 import fetch from 'node-fetch'
+import { prepareWAMessageMedia } from '@whiskeysockets/baileys'
 
 let handler = async (m, { conn, text }) => {
   if (!text)
     return conn.reply(m.chat, '`ꕥ` Ingrese el *nombre* de una canción de *soundcloud*.', m)
 
   try {
-    const api = `${global.APIs.light.url}/api/play/soundcloud?q=${encodeURIComponent(text)}`
-    const res = await axios.get(api, { timeout: 20000 })
+    const api = `${global.api.url}/api/play/soundcloud?q=${encodeURIComponent(text)}`
+    const res = await fetch(api, { signal: AbortSignal.timeout(20000) })
+    const json = await res.json()
 
-    if (!res.data.status || !res.data.result)
+    if (!json.status || !json.result)
       throw 'No se encontró la canción.'
 
-    const data = res.data.result
+    const data = json.result
     const { title, artist, duration, created, plays, likes, comments, genre, description, image, link, url
     } = data
 
-    const linkPreview = image ? (await gojo({ image: { url: image }}, { upload: conn.waUploadToServer, mediaTypeOverride: 'thumbnail-link' }).then(({ imageMessage }) => ({ 
+    const linkPreview = image ? (await prepareWAMessageMedia({ image: { url: image }}, { upload: conn.waUploadToServer, mediaTypeOverride: 'thumbnail-link' }).then(({ imageMessage }) => ({ 
       'canonical-url': link, 
       'matched-text': link, 
       title: `✧ Soundcloud • Music ✧`, 
@@ -55,8 +56,7 @@ let handler = async (m, { conn, text }) => {
     }, { quoted: m })
     
   } catch (e) {
-    console.error(e)
-    conn.reply(m.chat, `Error al buscar o descargar en SoundCloud.`, m)
+    conn.reply(m.chat, `> ✿︎ An unexpected error occurred while executing command *${usedPrefix + command}*.\n> *[Error: ${e.message}]*`, m)
   }
 }
 

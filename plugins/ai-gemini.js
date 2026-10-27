@@ -1,33 +1,62 @@
-import fetch from "node-fetch"
+import fetch from 'node-fetch'
+import fs from 'fs'
+import path from 'path'
 
-var shadow = async (m, { text, usedPrefix, command }) => {
-    if (!text) return m.reply(`ꕥ *Ingrese su consulta*\n\n*Ejemplo:* ${usedPrefix}${command} ¿Quién es satoru Gojo?`)
-
-    await m.react('💬')
-
-    try {
-        const username = await (async () => global.db.data.users[m.sender].name || (async () => { try { const n = await conn.getName(m.sender); return typeof n === 'string' && n.trim() ? n : m.sender.split('@')[0] } catch { return m.sender.split('@')[0] } })())()
-        const basePrompt = `Tu nombre es ${botname} y parece haber sido creada por ${etiqueta}. Tu versión actual es ${vs}, Tú usas el idioma Español. Llamarás a las personas por su nombre ${username}, te gusta ser divertida, y te encanta aprender. Lo más importante es que debes ser amigable con la persona con la que estás hablando. ${username}`
-        
-        const url = `${global.APIs.light.url}/ai/gemini?text=${encodeURIComponent(text)}&prompt=${encodeURIComponent(basePrompt)}`
-        
-        const res = await fetch(url)
-        const json = await res.json()
-
-        if (!json.status || !json.data?.response) {
-            return m.reply('Error API')
-        }
-
-        await m.reply(json.data.response)
-        await m.react('✅')
-    } catch (e) {
-        console.log(e)
-        m.reply('Error')
-    }
+const DB_PATH = path.resolve('src/gemini.json')
+function getDB() {
+  if (!fs.existsSync(path.dirname(DB_PATH))) {
+    fs.mkdirSync(path.dirname(DB_PATH), { recursive: true })
+  }
+  if (!fs.existsSync(DB_PATH)) {
+    fs.writeFileSync(DB_PATH, '{}')
+    return {}
+  }
+  try {
+    return JSON.parse(fs.readFileSync(DB_PATH, 'utf-8') || '{}')
+  } catch { return {} }
+}
+function saveDB(data) {
+  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2))
 }
 
-shadow.help = ['gemini']
-shadow.tags = ['ia']
-shadow.command = ['gemini']
+let handler = async (m, { conn, text, usedPrefix, command }) => {
+  let jid = m.sender
+  let db = getDB()
 
-export default shadow
+  if (['resetgemini'].includes(command)) {
+    delete db[jid]
+    saveDB(db)
+    return conn.reply(m.chat, `🌾 Sesión Gemini borrada para ${jid.split('@')[0]}`, m)
+  }
+
+  if (!text?.trim()) return conn.reply(m.chat, `✿ Usa: *${usedPrefix}gemini hola*`, m)
+
+  try {
+    await conn.sendPresenceUpdate('composing', m.chat)
+
+    let sessionId = db[jid]?.sessionId
+    let url = `${api2.url}/ai/gemini/v2?text=${encodeURIComponent(text)}${sessionId ? `&sessionId=${encodeURIComponent(sessionId)}` : ''}`
+
+    let res = await fetch(url).then(r => r.json())
+    if (!res.status) throw new Error('API falló')
+
+    let answer = res.data.response
+    let newSessionId = res.data.sessionId
+    db[jid] = {
+      sessionId: newSessionId,
+      lastMsg: text,
+      updatedAt: new Date().toISOString()
+    }
+    saveDB(db)
+
+    await conn.reply(m.chat, answer, m)
+
+  } catch (e) {
+    conn.reply(m.chat, `🍃 Error Gemini: ${e.message}`, m)
+  }
+}
+
+handler.command = ['gemini', 'resetgemini']
+handler.tags = ['ai']
+handler.help = ['gemini <texto>', 'resetgemini']
+export default handler

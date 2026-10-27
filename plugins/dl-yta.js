@@ -1,60 +1,55 @@
-
-import fetch from 'node-fetch'
+import fetch from "node-fetch"
 
 let handler = async (m, { conn, text, usedPrefix, command }) => {
-  if (!text) return m.reply(`✰ Uso: ${usedPrefix + command} <url de YouTube>\nEjemplo: ${usedPrefix + command} https://youtube.com/watch?v=lCKU-tI-upI`)
-
-  let statusMsg = await m.reply('🧊 *Descargando audio... espera*')
-
+  if (!text?.trim()) return conn.reply(m.chat, `✿ Ingresa un link de YouTube.\nEj: *${usedPrefix + command} https://youtu.be/...*`, m)
   try {
-    const api = `${global.APIs.light.url}/download/ytmp3?url=${encodeURIComponent(text)}`
-    const res = await fetch(api, { timeout: 25000 })
-    const json = await res.json()
+    await conn.reply(m.chat, `> 🕸️ Buscando video, espera un momento...`, m)
 
-    if (!json.status || !json.data?.dl) {
-      return conn.sendMessage(m.chat, {
-        text: `✘ ${json.message || 'API falló o link inválido'}`,
-        edit: statusMsg.key
-      })
-    }
+    let isDoc = text.includes('--doc')
+    let url = text.replace('--doc','').trim().split(/\s+/)[0]
+    if (!/youtu|youtube/.test(url)) throw "Link inválido"
 
-    const r = json.data
+    let apiRes = await (await fetch(`${api.url}/download/ytdl.php?url=${encodeURIComponent(url)}&format=mp3`)).json()
+    if (!apiRes.status) throw "No se pudo descargar"
+    let data = apiRes.data
+
+    let size = "Desconocido"
+    try {
+      let head = await fetch(data.download_url, { method: "HEAD" })
+      let bytes = head.headers.get("content-length")
+      if (bytes) size = (bytes / (1024*1024)).toFixed(2) + " MB"
+    } catch {}
 
     await conn.sendMessage(m.chat, {
-      audio: { url: r.dl },
-      mimetype: 'audio/mpeg',
-      fileName: `${r.title}.mp3`,
-      ptt: false
+      image: { url: data.thumbnail },
+      caption: `   *｡ Título ›* ${data.title}
+   *｡ Autor ›* ${data.author}
+   *｡ Formato ›* ${data.format}
+   *｡ Calidad ›* ${data.quality}
+   *｡ Tamaño ›* ${size}
+    
+> *🍜 Descargando audio...*`
     }, { quoted: m })
 
-    await conn.sendMessage(m.chat, {
-      text: `╭─❒ *YTMP3*
-│🎵 *Título:* ${r.title}
-│⏱️ *Duración:* ${r.duration}s
-│🎧 *Calidad:* ${r.quality}
-│📦 *Formato:* ${r.format}
-│💾 *Tamaño:* ${r.size}
-╰─❒
-
-✅ *Descarga completa*`,
-      edit: statusMsg.key
-    })
-
-    await m.react('✅')
+    if (isDoc) {
+      await conn.sendMessage(m.chat, {
+        document: { url: data.download_url },
+        mimetype: "audio/mpeg",
+        fileName: data.filename
+      }, { quoted: m })
+    } else {
+      await conn.sendMessage(m.chat, {
+        audio: { url: data.download_url },
+        mimetype: "audio/mpeg"
+      }, { quoted: m })
+    }
 
   } catch (e) {
-    console.error(e)
-    await conn.sendMessage(m.chat, {
-      text: `✘ Error: ${e.message}\n\n• Servidor no disponible\n• YouTube bloqueó\n• Link inválido`,
-      edit: statusMsg.key
-    })
-    await m.react('❌')
+    conn.reply(m.chat, `Error: ${e.message || e}`, m)
   }
 }
-
-handler.help = ['ytmp3 <url>', 'yta <url>']
-handler.tags = ['downloader']
-handler.command = ['ytmp3', 'yta']
+handler.command = ["yta", "ytmp3", "mp3doc"]
+handler.tags = ["download"]
+handler.help = ["yta *« link --doc »*"]
 handler.group = true
-
 export default handler

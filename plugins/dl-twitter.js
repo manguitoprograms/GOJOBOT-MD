@@ -7,7 +7,7 @@ return conn.reply(m.chat, `❀ Te faltó el link de una imagen/video de twitter.
 
 try {
 await m.react('🕒')
-const api = `${global.APIs.light.url}/download/twitter?url=${encodeURIComponent(text)}&type=info`
+const api = `${api.url}/download/twitter?url=${encodeURIComponent(text)}&type=info`
 const res = await fetch(api)
 const result = await res.json()
 

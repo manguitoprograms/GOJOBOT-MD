@@ -1,112 +1,44 @@
-import fetch from 'node-fetch'
+import fetch from "node-fetch"
 
-let handler = async (m, { conn, text }) => {
+let handler = async (m, { conn, text, usedPrefix, command }) => {
+  if (!text?.trim()) return conn.reply(m.chat, "✿ *Por favor, proporciona el nombre de una canción o artista.*", m)
   try {
-    if (!text) return m.reply('✰ Ingresa nombre o link de Apple Music')
-
-    const isLink = /music\.apple\.com/i.test(text)
-
-    if (isLink) {
-      await m.reply('🍜 Enviando audio...')
-      const api = `${global.APIs.light.url}/download/applemusic?url=${encodeURIComponent(text)}`
-      const res = await fetch(api)
-      const json = await res.json()
-      let dl = json?.data?.dl_url
-
-      if (!json.status || !dl) {
-
-        const api2 = `${global.APIs.light.url}/download/aplemate?url=${encodeURIComponent(text)}`
-        const res2 = await fetch(api2)
-        const json2 = await res2.json()
-
-        if (
-          !json2.status ||
-          !json2.result?.success ||
-          !json2.result?.download_link
-        ) {
-          throw 'No se pudo obtener el audio'
-        }
-
-        dl = json2.result.download_link
-
-        return await conn.sendMessage(m.chat, {
-          audio: { url: dl },
-          mimetype: 'audio/mp4',
-          fileName: `${json2.result.title}.m4a`
-        }, { quoted: m })
-      }
-
-      return await conn.sendMessage(m.chat, {
-        audio: { url: dl },
-        mimetype: 'audio/mp4',
-        fileName: `${json.data.title}.m4a`
-      }, { quoted: m })
-    }
-
-    await m.reply('🍜 Buscando en Apple Music...')
-
-    const searchApi = `${global.APIs.light.url}/search/applemusic?q=${encodeURIComponent(text)}&limit=1`
-    const res = await fetch(searchApi)
-    const json = await res.json()
-
-    if (!json.status || !json.results?.length) {
-      throw 'No se encontraron resultados'
-    }
-
-    const d = json.results[0]
-
-    const caption = `✰ Título: ${d.title}
-✿ Artista: ${d.artist}
-❀ Álbum: ${d.album}
-☁︎ Género: ${d.genre}
-🎧 Duración: ${d.duration}
-📅 Fecha: ${d.release_date}
-🫒 Link : ${d.link}
-`.trim()
+    const s = await (await fetch(`${api.url}/search/applemusic?q=${encodeURIComponent(text)}&limit=1`)).json()
+    if (!s.status || !s.results?.length) throw "Sin resultados"
+    const song = s.results[0]
 
     await conn.sendMessage(m.chat, {
-      image: { url: d.cover },
-      caption
+      image: { url: song.cover },
+      caption: `   *｡ Título ›* ${song.title}
+   *｡ Artista ›* ${song.artist}
+   *｡ Álbum ›* ${song.album}
+   *｡ Género ›* ${song.genre}
+   *｡ Duración ›* ${song.duration}
+   *｡ Fecha ›* ${song.release_date}
+   *｡ Enlace ›* ${song.link}
+    
+> 🕸️ Descargando audio... `
     }, { quoted: m })
 
-    const dlApi = `${global.APIs.light.url}/download/applemusic?url=${encodeURIComponent(d.link)}`
-    const res2 = await fetch(dlApi)
-    const json2 = await res2.json()
-
-    let dl = json2?.data?.dl_url
-    let title = json2?.data?.title || d.title
-
-    if (!json2.status || !dl) {
-
-      const api3 = `${global.APIs.light.url}/download/aplemate?url=${encodeURIComponent(d.link)}`
-      const res3 = await fetch(api3)
-      const json3 = await res3.json()
-
-      if (
-        !json3.status ||
-        !json3.result?.success ||
-        !json3.result?.download_link
-      ) {
-        throw 'No se pudo obtener el audio'
-      }
-
-      dl = json3.result.download_link
-      title = json3.result.title
+    let dlUrl = null
+    try {
+      const r1 = await (await fetch(`${api.url}/download/applemusic?url=${encodeURIComponent(song.link)}`)).json()
+      if (r1.status && r1.data?.dl_url) dlUrl = r1.data.dl_url
+    } catch {}
+    if (!dlUrl) {
+      const r2 = await (await fetch(`${api.url}/download/aplmate?url=${encodeURIComponent(song.link)}`)).json()
+      dlUrl = r2.result?.tracks?.[0]?.download_url || r2.data?.downloads?.[0]?.url
+      if (!dlUrl) throw "No se pudo obtener link de descarga"
     }
 
-    await conn.sendMessage(m.chat, {
-      document: { url: dl },
-      mimetype: 'audio/mp4',
-      fileName: `${title}.m4a`
-    }, { quoted: m })
-
+    await conn.sendMessage(m.chat, { audio: { url: dlUrl }, mimetype: "audio/mpeg", fileName: `${song.title}.mp3` }, { quoted: m })
   } catch (e) {
-    m.reply('✘ Error en Apple Music')
+    conn.reply(m.chat, `> ✿︎ An unexpected error occurred while executing command *${usedPrefix + command}*.\n> *[Error: ${e.message || e}]*`, m)
   }
 }
-
-handler.help = ['applemusic', 'apple']
-handler.tags = ['search']
-handler.command = ['applemusic', 'apple', 'applesearch']
+handler.command = ["apple", "applemusic", "apl"]
+handler.tags = ["download"]
+handler.help = ["apple *« ǫᴜᴇʀʏ »*"]
+handler.group = true
 
 export default handler

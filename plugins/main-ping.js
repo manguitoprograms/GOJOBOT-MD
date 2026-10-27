@@ -1,64 +1,46 @@
-import speed from 'performance-now'
 import os from 'os'
+import { performance } from 'perf_hooks'
 
 let handler = async (m, { conn }) => {
-  const start = Date.now()
+  const t1 = performance.now()
+  const msg = await conn.sendMessage(m.chat, { text: '`🌱 Midiendo...`' }, { quoted: m })
+  const t2 = performance.now()
 
-  const fakePaymentQuote = {
-    key: {
-      participant: m.sender,
-      remoteJid: m.chat,
-      fromMe: false,
-      id: 'PAYQUOTE'
-    },
-    message: {
-      requestPaymentMessage: {
-        currencyCodeIso4217: 'USD',
-        amount1000: 1000000000,
-        requestFrom: m.sender,
-        noteMessage: {
-          extendedTextMessage: {
-            text: global.botname || ''
-          }
-        },
-        expiryTimestamp: Math.floor(Date.now() / 1000) + 86400,
-        amount: {
-          value: 1000000000,
-          offset: 1000,
-          currencyCode: 'USD'
-        }
-      }
-    },
-    participant: m.sender
-  }
+  const latensi = (t2 - t1).toFixed(2)
+  const ramTotal = (os.totalmem() / 1024 / 1024 / 1024).toFixed(2)
+  const ramLibre = (os.freemem() / 1024 / 1024 / 1024).toFixed(2)
+  const ramUsoMB = (os.totalmem() - os.freemem()) / 1024 / 1024
+  const ramUsoGB = ((os.totalmem() - os.freemem()) / 1024 / 1024 / 1024).toFixed(2)
 
-  await conn.reply(m.chat, '`🌱 ¡Pong!`', m)
-
-  const latensi = Date.now() - start
-
-  let ramTotal = (os.totalmem() / 1024 / 1024).toFixed(0)
-  let ramLibre = (os.freemem() / 1024 / 1024).toFixed(0)
-  let ramUso = ramTotal - ramLibre
-
-  let uptime = process.uptime()
+  const isWindows = os.platform() === 'win32'
+  const loadRaw = isWindows ? null : os.loadavg()[0]
+  const load = isWindows
+    ? 'N/A (Windows)'
+    : `${loadRaw.toFixed(2)}%`
 
   let pingEmoji =
-    latensi < 50 ? '🟢 Excelente' :
-    latensi < 120 ? '🟡 Bueno' :
-    latensi < 200 ? '🟠 Medio' :
+    latensi < 200 ? '🟢 Excelente' :
+    latensi < 300 ? '🟡 Bueno' :
+    latensi < 500 ? '🟠 Medio' :
     '🔴 Lento'
 
-  let teks = `*'ׄ𐚁ִㅤS T A T U S - P I N Gׄ ₍ ᐢ..ᐢ ₎'*
+  const teks = `*'ׄ𐚁ִㅤS T A T U S - P I N Gׄ ₍ ᐢ..ᐢ ₎'*
 
-  *｡ speed :* ${latensi} ms (${pingEmoji})
-  *｡ Runtime :* ${formatTime(uptime)}
-  *｡ Plataforma :* ${os.platform()} (${os.arch()})
-  *｡ Node v :* ${process.version}
-  *｡ Ram :* ${ramUso} MB / ${ramTotal} MB
+*｡ Speed :* ${latensi} ms (${pingEmoji})
+*｡ Runtime :* ${clockString(process.uptime() * 1000)}
+*｡ Load :* ${load}
+*｡ Plataforma :* ${os.platform()} (${os.arch()})
+*｡ Node :* ${process.version.replace(/^v/, '')}
+*｡ RAM :* ${ramUsoMB.toFixed(0)} MB (${ramUsoGB} GB) / ${ramTotal} GB
+*｡ Free :* ${ramLibre} GB
 
-${dev}`
+> ${global.dev}`
 
-  await conn.reply(m.chat, teks, fakePaymentQuote)
+  try {
+    await conn.sendMessage(m.chat, { text: teks, edit: msg.key })
+  } catch {
+    await conn.sendMessage(m.chat, { text: teks }, { quoted: m })
+  }
 }
 
 handler.help = ['ping']
@@ -67,18 +49,10 @@ handler.command = ['ping', 'p']
 
 export default handler
 
-function formatTime(seconds) {
-  seconds = Number(seconds)
-
-  let d = Math.floor(seconds / (3600 * 24))
-  let h = Math.floor(seconds % (3600 * 24) / 3600)
-  let m = Math.floor(seconds % 3600 / 60)
-  let s = Math.floor(seconds % 60)
-
-  return [
-    d ? `${d}d` : '',
-    h ? `${h}h` : '',
-    m ? `${m}m` : '',
-    s ? `${s}s` : ''
-  ].filter(Boolean).join(' ')
+function clockString(ms) {
+  let d = Math.floor(ms / 86400000)
+  let h = Math.floor(ms / 3600000) % 24
+  let m = Math.floor(ms / 60000) % 60
+  let s = Math.floor(ms / 1000) % 60
+  return [d ? `${d}d ` : '', h ? `${h}h ` : '', m ? `${m}m ` : '', `${s}s`].join('').trim()
 }
