@@ -165,7 +165,7 @@ try {
     poll: {
       name:
         `💚🔥 GOJOBOT-MD × SATORU GOJO CHALLENGE 🔥💚\n\n` +
-        `⏳ ¡SOLO TIENEN 30 SEGUNDOS PARA RESPONDER!\n\n` +
+        `⏳ ¡SOLO TIENEN 25 SEGUNDOS PARA RESPONDER!\n\n` +
         elegida.pregunta,
       values: elegida.opciones.map((opcion, i) =>
         `${String.fromCharCode(65 + i)}) ${opcion}`
@@ -187,7 +187,7 @@ try {
     } catch (error) {
       console.error('[GOJOBOT-MD] No se pudo eliminar la encuesta:', error)
     }
-  }, 30000)
+  }, 25000)
 
 } catch (error) {
   console.error('[GOJOBOT-MD] Error al publicar encuesta:', error)
