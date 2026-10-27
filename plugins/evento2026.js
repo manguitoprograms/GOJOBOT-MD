@@ -142,8 +142,9 @@ handler.help = [
   'pregunta final',
   'pregunta respuesta'
 ]
+handler.help = ['pregunta']
 handler.tags = ['evento']
-handler.command = /^pregunta$/i
+handler.command = ['pregunta']
 handler.group = true
 
 export default handler
