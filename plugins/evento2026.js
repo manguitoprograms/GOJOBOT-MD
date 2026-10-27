@@ -159,39 +159,40 @@ let handler = async (m, { conn, text, isAdmin, isOwner }) => {
   const elegida = disponibles[Math.floor(Math.random() * disponibles.length)]
   const indice = preguntas.indexOf(elegida)
 
-  try {
-    const encuesta = await conn.sendMessage(m.chat, {
-      poll: {
-        name:
-          `💚🔥 GOJOBOT-MD × SATORU GOJO CHALLENGE 🔥💚\n\n` +
-          `⏳ ¡SOLO TIENEN 1 MINUTO Y MEDIO PARA RESPONDER!\n\n` +
-          elegida.pregunta,
-        values: elegida.opciones.map((opcion, i) =>
-          `${String.fromCharCode(65 + i)}) ${opcion}`
-        ),
-        selectableCount: 1
-      }
-    }, { quoted: m })
+  
+try {
+  const encuesta = await conn.sendMessage(m.chat, {
+    poll: {
+      name:
+        `💚🔥 GOJOBOT-MD × SATORU GOJO CHALLENGE 🔥💚\n\n` +
+        `⏳ ¡SOLO TIENEN 40 SEGUNDOS PARA RESPONDER!\n\n` +
+        elegida.pregunta,
+      values: elegida.opciones.map((opcion, i) =>
+        `${String.fromCharCode(65 + i)}) ${opcion}`
+      ),
+      selectableCount: 1
+    }
+  }, { quoted: m })
 
-    usadas.add(indice)
-    ultimaPregunta.set(m.chat, elegida)
+  usadas.add(indice)
+  ultimaPregunta.set(m.chat, elegida)
 
-    // Solicitar eliminación de la encuesta después de 90 segundos.
-    setTimeout(async () => {
-      try {
-        await conn.sendMessage(m.chat, {
-          delete: encuesta.key
-        })
-        console.log('[GOJOBOT-MD] Solicitud de eliminación de encuesta enviada.')
-      } catch (error) {
-        console.error('[GOJOBOT-MD] No se pudo eliminar la encuesta:', error)
-      }
-    }, 90000)
+  // Solicitar eliminación de la encuesta después de 40 segundos.
+  setTimeout(async () => {
+    try {
+      await conn.sendMessage(m.chat, {
+        delete: encuesta.key
+      })
+      console.log('[GOJOBOT-MD] Solicitud de eliminación de encuesta enviada.')
+    } catch (error) {
+      console.error('[GOJOBOT-MD] No se pudo eliminar la encuesta:', error)
+    }
+  }, 40000)
 
-  } catch (error) {
-    console.error('[GOJOBOT-MD] Error al publicar encuesta:', error)
-    return m.reply(`❌ No se pudo publicar la encuesta: ${error.message}`)
-  }
+} catch (error) {
+  console.error('[GOJOBOT-MD] Error al publicar encuesta:', error)
+  return m.reply(`❌ No se pudo publicar la encuesta: ${error.message}`)
+}
 }
 
 handler.help = [
