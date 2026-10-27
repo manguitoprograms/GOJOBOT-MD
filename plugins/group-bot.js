@@ -42,5 +42,6 @@ let handler = async (m, { conn, usedPrefix, command, args, isAdmin, isOwner }) =
 handler.help = ['bot on/off']
 handler.tags = ['group']
 handler.command = ['bot']
+handler.bypassBan = true
 
 export default handler
