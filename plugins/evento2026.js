@@ -116,10 +116,11 @@ let handler = async (m, { conn, text, isAdmin, isOwner }) => {
   const indice = preguntas.indexOf(elegida)
 
   
+
 try {
   const encuesta = await conn.sendMessage(m.chat, {
     poll: {
-      name: `💚🔥 GOJOBOT-MD × SATORU GOJO CHALLENGE 🔥💚\n\n⏳ ¡SOLO TIENEN 1 MINUTO PARA RESPONDER!\n\n${elegida.pregunta}`,
+      name: `💚🔥 GOJOBOT-MD × SATORU GOJO CHALLENGE 🔥💚\n\n⏳ ¡SOLO TIENEN 1 MINUTO Y MEDIO PARA RESPONDER!\n\n${elegida.pregunta}`,
       values: elegida.opciones.map((opcion, i) =>
         `${String.fromCharCode(65 + i)}) ${opcion}`
       ),
@@ -130,21 +131,22 @@ try {
   usadas.add(indice)
   ultimaPregunta.set(m.chat, elegida)
 
-  // Eliminar la encuesta después de 1 minuto
+  // Esperar 90 segundos y eliminar la encuesta
   setTimeout(async () => {
     try {
       await conn.sendMessage(m.chat, {
         delete: encuesta.key
       })
-    } catch (e) {
-      console.error('[GOJOBOT-MD] Error al eliminar encuesta:', e)
+      console.log('[GOJOBOT-MD] Solicitud de eliminación enviada.')
+    } catch (error) {
+      console.error('[GOJOBOT-MD] Error al eliminar encuesta:', error)
     }
-  }, 120 * 2000)
+  }, 90000)
 
-} catch (e) {
-  return m.reply(`❌ No se pudo enviar la encuesta: ${e.message}`)
+} catch (error) {
+  console.error('[GOJOBOT-MD] Error al publicar encuesta:', error)
+  return m.reply(`❌ No se pudo publicar la encuesta: ${error.message}`)
 }
-
 }
 
 handler.help = [
