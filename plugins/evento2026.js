@@ -165,7 +165,7 @@ try {
     poll: {
       name:
         `💚🔥 GOJOBOT-MD × SATORU GOJO CHALLENGE 🔥💚\n\n` +
-        `⏳ ¡SOLO TIENEN 40 SEGUNDOS PARA RESPONDER!\n\n` +
+        `⏳ ¡SOLO TIENEN 30 SEGUNDOS PARA RESPONDER!\n\n` +
         elegida.pregunta,
       values: elegida.opciones.map((opcion, i) =>
         `${String.fromCharCode(65 + i)}) ${opcion}`
@@ -177,7 +177,7 @@ try {
   usadas.add(indice)
   ultimaPregunta.set(m.chat, elegida)
 
-  // Solicitar eliminación de la encuesta después de 40 segundos.
+  // Solicitar eliminación de la encuesta después de 30 segundos.
   setTimeout(async () => {
     try {
       await conn.sendMessage(m.chat, {
@@ -187,7 +187,7 @@ try {
     } catch (error) {
       console.error('[GOJOBOT-MD] No se pudo eliminar la encuesta:', error)
     }
-  }, 40000)
+  }, 30000)
 
 } catch (error) {
   console.error('[GOJOBOT-MD] Error al publicar encuesta:', error)
