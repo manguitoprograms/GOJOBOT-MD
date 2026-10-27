@@ -115,22 +115,36 @@ let handler = async (m, { conn, text, isAdmin, isOwner }) => {
   const elegida = disponibles[Math.floor(Math.random() * disponibles.length)]
   const indice = preguntas.indexOf(elegida)
 
-  try {
-    await conn.sendMessage(m.chat, {
-      poll: {
-        name: `💚🔥 GOJOBOT-MD × SATORU GOJO CHALLENGE 🔥💚\n\n${elegida.pregunta}`,
-        values: elegida.opciones.map((opcion, i) =>
-          `${String.fromCharCode(65 + i)}) ${opcion}`
-        ),
-        selectableCount: 1
-      }
-    }, { quoted: m })
+  
+try {
+  const encuesta = await conn.sendMessage(m.chat, {
+    poll: {
+      name: `💚🔥 GOJOBOT-MD × SATORU GOJO CHALLENGE 🔥💚\n\n⏳ ¡SOLO TIENEN 1 MINUTO PARA RESPONDER!\n\n${elegida.pregunta}`,
+      values: elegida.opciones.map((opcion, i) =>
+        `${String.fromCharCode(65 + i)}) ${opcion}`
+      ),
+      selectableCount: 1
+    }
+  }, { quoted: m })
 
-    usadas.add(indice)
-    ultimaPregunta.set(m.chat, elegida)
-  } catch (e) {
-    return m.reply(`❌ No se pudo enviar la encuesta: ${e.message}`)
-  }
+  usadas.add(indice)
+  ultimaPregunta.set(m.chat, elegida)
+
+  // Eliminar la encuesta después de 1 minuto
+  setTimeout(async () => {
+    try {
+      await conn.sendMessage(m.chat, {
+        delete: encuesta.key
+      })
+    } catch (e) {
+      console.error('[GOJOBOT-MD] Error al eliminar encuesta:', e)
+    }
+  }, 120 * 2000)
+
+} catch (e) {
+  return m.reply(`❌ No se pudo enviar la encuesta: ${e.message}`)
+}
+
 }
 
 handler.help = [
