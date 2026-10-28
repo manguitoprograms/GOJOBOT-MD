@@ -27,8 +27,8 @@ const handler = async (m, { conn, args, command }) => {
     }
 
     // 🔥 NUEVAS RECOMPENSAS
-    const rewardCoins = 20000000; // monedas
-    const rewardExp = 200;        // experiencia
+    const rewardCoins = 30000; // monedas
+    const rewardExp = 2500;        // experiencia
     const rewardTokens = 4;       // tokens
 
     user.coin += rewardCoins;
