@@ -1,12 +1,12 @@
-const pHora = 500000
-const pDia = 12000000
-const pSemana = 30000000
-const pMes = 50000000
+const pHora = 50000
+const pDia = 275000
+const pSemana = 1000000
+const pMes = 5000000
 
-const cHora = 200000
-const cDia = 250000
-const cSemana = 500000
-const cMes = 1000000
+const cHora = 1000
+const cDia = 15000
+const cSemana = 67000
+const cMes = 150000
 
 let handler = async (m, { conn, usedPrefix, command, args }) => {
 let texto = `✐ Opciones disponibles para comprar premium:
